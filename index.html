@@ -163,7 +163,7 @@ function showMap(){
 		}
 	})
 	.on('click', function(country){
-		updateSelected(countryCodes.get(country.id).name,countryCodes.get(country.id).official_name_en);
+		updateSelected(countryCodes.get(country.id).name,countryCodes.get(country.id).official_name_en.replace(/\s/g, ''));
 		updateLineGraph();
 	});
 
