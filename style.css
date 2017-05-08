@@ -12,7 +12,8 @@ h1{
 
 h2{
 	font-weight:400;
-	margin-top:0;
+	font-size:1.2em;
+	margin-top:5px;
 	margin-bottom:20px;
 }
 
@@ -45,17 +46,8 @@ path.country:hover{
 	border: solid #cccccc 1px;
 }
 
-#gii-line-graph, #world-map, #arrow-svg, {
-	display: inline-block;
-}
-
-#world-map{ 
-	display:block; 
-	margin: 0 auto;
-}
-
-#gii-line-graph{ 
-	margin-left: 0px;
+#gii-line-graph{
+	margin-left:0px;
 }
 
 #gii-line-graph line:hover{
@@ -78,4 +70,34 @@ line#v1, line#v2 {
 }
 .bubble-info:hover{
 	cursor:default;
+}
+
+@media (min-width: 1140px) {
+	#gii-line-graph, #world-map, #arrow-svg, {
+		display: inline-block;
+	}
+
+	#world-map{ 
+		display:block; 
+		margin: 0 auto;
+	}
+}
+@media (max-width: 1139px) {
+	#gii-line-graph, #world-map, #arrow-svg, {
+		display: inline-block;
+	}
+
+	#arrow-svg{
+		padding-left:100px;
+		padding-bottom:50px;
+	}
+
+	#gii-line-graph{
+		padding-bottom:50px;
+	}
+
+	#world-map, #bubble-graph{ 
+		display:block; 
+		margin: 0 auto;
+	}
 }

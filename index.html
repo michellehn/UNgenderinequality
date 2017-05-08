@@ -6,10 +6,10 @@
 <link rel="stylesheet" type="text/css" href="style.css">
 
 <h1>Worldwide Gender Inequality</h1>
-<h2>Based on the UN Gender Inequality Index (GII)</h2>
+<h2>By Michelle Nelson, Harley Mueller, and Philip Tao</h2>
 <p id="title-description">The United Nations evaluates gender inequality with their <a href="http://hdr.undp.org/en/content/gender-inequality-index-gii" target="_blank">Gender Inequality Index (GII)</a>, calculated by measuring seven aspects of human development: 1) adolescent birth rate, 2) male labor force participation, 3) female labor force participation, 4) maternal mortality ratio, 5) male participation in secondary education, 6) female participation in secondary education, and 6) representation of women in parliament. These variables are calculated together to create the index value, where a lower value indicates more gender equality.<br><br>Select a country below to view its GII index over time and the factors that are calculated into its GII index. </p>
 
-<svg id="world-map" width="1050" height="520"></svg>
+<svg id="world-map"></svg>
 <svg id="arrow-svg" width="50" height="500">
 	<defs>
 	<!-- Inspired by http://bl.ocks.org/tomgp/d59de83f771ca2b6f1d4 and in class example from April 10-->
@@ -19,8 +19,8 @@
 	</marker>
 	</defs>
 </svg>
-<svg id="gii-line-graph" width="550" height="500"></svg>
-<svg id="bubble-graph" width="700" height="450"></svg>
+<svg id="gii-line-graph"></svg>
+<svg id="bubble-graph"></svg>
 <canvas id = "canvas"> </canvas>
 
 
@@ -31,6 +31,38 @@
 // country codes data from http://data.okfn.org/data/core/country-codes#data
 // data on the Gender Inequality Index and its associated factors obtained from the United Nations Development Programme, Human Development Reports: http://hdr.undp.org/en/data
 
+// set svg widths, dynamically
+if (window.innerWidth > 1340){
+	d3.select("#world-map")
+		.attr("width",1050)
+		.attr("height",520);
+	d3.select("#gii-line-graph")
+		.attr("width",550)
+		.attr("height",500);
+	d3.select("#bubble-graph")
+		.attr("width",700)
+		.attr("height",450);
+} else if (window.innerWidth > 1140) {
+	d3.select("#world-map")
+		.attr("width",1050)
+		.attr("height",520);
+	d3.select("#gii-line-graph")
+		.attr("width",550)
+		.attr("height",500);
+	d3.select("#bubble-graph")
+		.attr("width",500)
+		.attr("height",450);
+} else if (window.innerWidth < 1140) {
+	d3.select("#world-map")
+		.attr("width",850)
+		.attr("height",420);
+	d3.select("#gii-line-graph")
+		.attr("width",550)
+		.attr("height",500);
+	d3.select("#bubble-graph")
+		.attr("width",700)
+		.attr("height",450);
+}
 
 // VARIABLE DECLARATIONS
 
@@ -76,6 +108,7 @@ var indexYears = [1995, 2000, 2005, 2010, 2011, 2012, 2013, 2014, 2015];
 var colors = ["#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#9062c1"];
 var formatNumber = d3.format(".4"),
 	formatYear = function(x) { return formatNumber(x); };
+
 
 // LOAD ALL DATA
 
@@ -523,7 +556,8 @@ var middleMargin = 30;
 var radiusMax = (bubbleSvgWidth-(2*bubbleSvgMargin)-(6*bubbleMargin))/3/2;
 var radiusMin = 55;
 var variance = 15;
-var bottomYPos = bubbleSvgHeight - bubbleSvgMargin - radiusMax;
+// var bottomYPos = bubbleSvgHeight - bubbleSvgMargin - radiusMax;
+var bottomYPos = (bubbleSvgHeight/2) + bubbleSvgMargin + radiusMax;
 var midYPos = bottomYPos-(2*bubbleMargin)-radiusMax-middleMargin;
 
 var positions = [
@@ -726,7 +760,7 @@ function clearCircles(){
 	        .style("font-size", "25px") 
 	        .style("fill", "grey")
 	        .style("opacity", 0.3)
-	        .text("CLICK A POINT ON THE GRAPH"); 
+	        .text("HOVER AND CLICK A POINT ON THE 2ND"); 
 	bubbleMap.append("text")
 	        .attr("x", bubbleSvgWidth/2)             
 	        .attr("y", 2*bubbleSvgHeight/3-50)
@@ -735,7 +769,7 @@ function clearCircles(){
 	        .style("font-size", "25px") 
 	        .style("fill", "grey")
 	        .style("opacity", 0.3)
-	        .text("TO SHOW COUNTRY GII DETAILS"); 
+	        .text("GRAPH TO SHOW COUNTRY GII DETAILS"); 
 }
 
 </script>
