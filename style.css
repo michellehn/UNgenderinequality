@@ -1,0 +1,81 @@
+body { 
+	font-family: 'Alegreya Sans', Calibri, sans-serif; 
+	margin: 15px; 
+	text-align:center;
+}
+
+h1{ 
+	font-size:40px;
+	margin-top:50px;
+	margin-bottom:0;
+}
+
+h2{
+	font-weight:400;
+	margin-top:0;
+	margin-bottom:20px;
+}
+
+path.country { 
+	fill: #ccc; 
+	stroke: #888; 
+}
+
+path.country:hover{ 
+	cursor: pointer; 
+}
+
+.deleteIcon:hover{ 
+	cursor: pointer; 
+}
+
+.axis line, 
+.yAxis line,
+.xAxis line {
+	stroke: #BCBBBB;
+}
+
+.axis path,
+.yAxis path, 
+.xAxis path {
+	stroke: #BCBBBB;
+}
+
+#bubble-graph, #world-map{ 
+	border: solid #cccccc 1px;
+}
+
+#gii-line-graph, #world-map, #arrow-svg, {
+	display: inline-block;
+}
+
+#world-map{ 
+	display:block; 
+	margin: 0 auto;
+}
+
+#gii-line-graph{ 
+	margin-left: 0px;
+}
+
+#gii-line-graph line:hover{
+	cursor:pointer;
+}
+
+line#v1, line#v2 { 
+	fill: none; 
+	stroke: #BCBBBB; 
+	marker-end: url(#greyarrow); 
+}
+
+#title-description{
+	width:950px;
+	margin: 0 auto;
+	margin-bottom:30px;
+}
+.arrowHead-grey{
+	fill:#BCBBBB;
+}
+.bubble-info:hover{
+	cursor:default;
+}

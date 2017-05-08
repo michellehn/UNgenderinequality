@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<link rel="stylesheet" type="text/css" href="style.css">
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/topojson.v2.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+<link rel="stylesheet" type="text/css" href="style.css">
+
+<h1>Worldwide Gender Inequality</h1>
+<h2>Based on the UN Gender Inequality Index (GII)</h2>
+<p id="title-description">The United Nations evaluates gender inequality with their <a href="http://hdr.undp.org/en/content/gender-inequality-index-gii" target="_blank">Gender Inequality Index (GII)</a>, calculated by measuring seven aspects of human development: 1) adolescent birth rate, 2) male labor force participation, 3) female labor force participation, 4) maternal mortality ratio, 5) male participation in secondary education, 6) female participation in secondary education, and 6) representation of women in parliament. These variables are calculated together to create the index value, where a lower value indicates more gender equality.<br><br>Select a country below to view its GII index over time and the factors that are calculated into its GII index. </p>
+
+<svg id="world-map" width="1050" height="520"></svg>
+<svg id="arrow-svg" width="50" height="500">
+	<defs>
+	<!-- Inspired by http://bl.ocks.org/tomgp/d59de83f771ca2b6f1d4 and in class example from April 10-->
+	<marker id="greyarrow" viewBox="0 -2 10 5" refX="0" refY="0" 
+		markerWidth="4" markerHeight="4" orient="auto">
+		<path d="M0,-5L10,0,L0,5" class="arrowHead-grey"/>
+	</marker>
+	</defs>
+</svg>
+<svg id="gii-line-graph" width="550" height="500"></svg>
+<svg id="bubble-graph" width="700" height="450"></svg>
+<canvas id = "canvas"> </canvas>
+
+
+<script>
+
+// DATA SOURCES
+// world map data modified from class notes, 2/15/17
+// country codes data from http://data.okfn.org/data/core/country-codes#data
+// data on the Gender Inequality Index and its associated factors obtained from the United Nations Development Programme, Human Development Reports: http://hdr.undp.org/en/data
+
+
+// VARIABLE DECLARATIONS
+
+// select svgs
+var mapSvg = d3.select("#world-map");
+var lineGraphSvg = d3.select("#gii-line-graph")
+var arrowSvg = d3.select("#arrow-svg");
+var bubbleMap = d3.select("#bubble-graph");
+
+var bubbleSvgWidth = parseInt(bubbleMap.style("width"));
+var bubbleSvgHeight = parseInt(bubbleMap.style("height"));
+clearCircles();
+
+// some projection options: geoPatterson()  geoNaturalEarth()  geoEckert3()
+var projection = d3.geoPatterson().scale(50);
+var pathGenerator = d3.geoPath().projection(projection);
+
+var rawData;
+var countries;
+var countryCodes;
+var officialNameMap;
+var GIIData;
+
+var selectedCountries = {};
+
+var AdoleData;
+var LaborForceFemaleData;
+var LaborForceMaleData;
+var MaternalMortalityRatioData;
+var PopSecEduFemaleData;
+var PopSecEduMaleData;
+var SeatsParliamentData;
+
+var sevenData = {
+	AdoleValue: 0,
+	LaborValue: 0,
+	MaternalValue: 0,
+	PopSecValue: 0,
+	SeatsValue: 0
+};
+
+var indexYears = [1995, 2000, 2005, 2010, 2011, 2012, 2013, 2014, 2015];
+var colors = ["#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#9062c1"];
+var formatNumber = d3.format(".4"),
+	formatYear = function(x) { return formatNumber(x); };
+
+// LOAD ALL DATA
+
+// data for map
+d3.json("data/country-codes.json", function (error, data) {
+	countryCodes = d3.map(data, function(d) { return parseInt(d.M49, 10); }); 
+	officialNameMap = d3.map(data, function(d) { 
+		if (d.official_name_en){
+			return d.official_name_en.replace(/\s/g, '');
+		}
+	}); 
+});
+
+d3.json("data/world-50m.json", function (error, data) {
+	rawData = data;
+	countries = topojson.feature(rawData, rawData.objects.countries);
+	showMap();
+});
+
+// data for gender inequality index graph
+d3.csv("data/GenderInequalityIndex.csv", function(data){
+	data.forEach(function(d){
+		//convert strings to numbers
+		d["1995"] = +d["1995"];
+		d["2000"] = +d["2000"];
+		d["2005"] = +d["2005"];
+		d["2010"] = +d["2010"];
+		d["2011"] = +d["2011"];
+		d["2012"] = +d["2012"];
+		d["2013"] = +d["2013"];
+		d["2014"] = +d["2014"];
+		d["2015"] = +d["2015"];
+ 
+	});
+	GIIData = d3.map(data, function(d) { return d.Country; });
+});
+
+// data for bubbles graph
+d3.csv("data/AdolescentBirthRate.csv", function(error, data){
+	AdoleData = d3.map(data, function(d) { return d.Country.replace(/\s/g, ''); });
+});
+d3.csv("data/LaborForceParticipation-Female.csv", function(error, data){
+	LaborForceFemaleData = d3.map(data, function(d) { return d.Country.replace(/\s/g, ''); });
+});
+d3.csv("data/LabourForceParticipation-Male.csv", function(error, data){
+	LaborForceMaleData = d3.map(data, function(d) { return d.Country.replace(/\s/g, ''); });
+});
+d3.csv("data/MaternalMortalityRatio.csv", function(error, data){
+	MaternalMortalityRatioData = d3.map(data, function(d) { return d.Country.replace(/\s/g, ''); });
+});
+d3.csv("data/PopulationSecondaryEducation-Female.csv", function(error, data){
+	PopSecEduFemaleData = d3.map(data, function(d) { return d.Country.replace(/\s/g, ''); });
+});
+d3.csv("data/PopulationSecondaryEducation-Male.csv", function(error, data){
+	PopSecEduMaleData = d3.map(data, function(d) { return d.Country.replace(/\s/g, ''); });
+});
+d3.csv("data/ShareOfSeatsInParliament.csv", function(error, data){
+	SeatsParliamentData = d3.map(data, function(d) { return d.Country.replace(/\s/g, ''); });
+});
+
+
+function showMap(){
+	// Create or modify paths for each country
+	projection.fitExtent([[0,0], [mapSvg.attr("width"), mapSvg.attr("height")]], countries);
+	pathGenerator = d3.geoPath().projection(projection);
+	
+	var paths = mapSvg.selectAll("path.country").data(countries.features);
+
+	paths.enter().append("path").attr("class", "country")
+	.merge(paths) 
+	.attr("id",function (country){ return countryCodes.get(country.id).name.replace(/\s/g, ''); })
+	.attr("d", function (country) { return pathGenerator(country); })
+	.on('mouseover', function(country){
+		mapSvg.select("#CountryName").text(countryCodes.get(country.id).name);
+		var fillCol = d3.select("#"+countryCodes.get(country.id).name.replace(/\s/g, '')).style("fill");
+		if (fillCol == "rgb(204, 204, 204)"){
+			d3.select("#"+countryCodes.get(country.id).name.replace(/\s/g, '')).style("fill", "#b3b3b3");
+		}
+	})
+	.on('mouseout', function(country){
+		mapSvg.select("#CountryName").text("");
+		var fillCol = d3.select("#"+countryCodes.get(country.id).name.replace(/\s/g, '')).style("fill");
+		if (fillCol == "rgb(179, 179, 179)"){
+			d3.select("#"+countryCodes.get(country.id).name.replace(/\s/g, '')).style("fill", "#ccc");
+		}
+	})
+	.on('click', function(country){
+		updateSelected(countryCodes.get(country.id).name,countryCodes.get(country.id).official_name_en);
+		updateLineGraph();
+	});
+
+	mapSvg.append("text")
+	.attr("id", "CountryName")
+	.attr("x", 30)
+	.attr("y", 490)
+	.attr("font-size", "16pt");
+}
+
+function updateSelected(name, officialName){
+	if (Object.keys(GIIData).includes("$"+officialName.replace(/\s/g, ''))) {
+		if (Object.keys(selectedCountries).includes(officialName.replace(/\s/g, ''))){
+			// country in array, then delete country
+			delete selectedCountries[officialName];
+			// change the country's color to the original grey color (normal color in the map)
+			d3.select("#"+name.replace(/\s/g, '')).style("fill", "#ccc");
+			clearCircles();
+		} else if (Object.keys(selectedCountries).length < 10) {
+			// country not in the array and not all 10 countries have been selected
+			var col = selectUniqueColor(colors.slice());
+			selectedCountries[officialName.replace(/\s/g, '')] = col;
+			d3.select("#"+name.replace(/\s/g, '')).style("fill", col);
+		} else {
+			// list of selected coutnries is too long
+			window.alert("You can only select a maximum of 10 countries.");
+		}
+	} else {
+		window.alert("No data available for "+name);
+	}
+}
+
+function selectUniqueColor(colorOptions){
+	// returns a  color from colorOptions, given that the color is not in selectedCountries
+	// precondition: selectedCountries.length < 11
+	noColor = true;
+	while (noColor) {
+		var color = colorOptions[Math.floor(Math.random()*colorOptions.length)];
+		if (Object.values(selectedCountries).includes(color)){ 
+			var index = colorOptions.indexOf(color);
+			colorOptions.splice(index,1);
+			selectUniqueColor(colorOptions);
+		} else {
+			return color;
+		}
+	}
+}
+
+//code source: https://coderwall.com/p/_g3x9q/how-to-check-if-javascript-object-is-empty
+function isEmpty(obj) {
+    for(var key in obj) {
+        if(obj.hasOwnProperty(key))
+            return false;
+    }
+    return true;
+}
+
+arrowSvg.append("line")
+	.attr("id", "v1")
+	.attr("class","arrow")
+	.attr("stroke-width", 2) 
+	.attr("stroke", "grey")
+	.attr("x1", 35).attr("y1", 200)
+	.attr("x2", 35).attr("y2", 80);
+arrowSvg.append("line")
+	.attr("id", "v2")
+	.attr("class", "arrow")
+	.attr("stroke-width", 2)
+	.attr("stroke", "grey")
+	.attr("x1", 35).attr("y1", 320)
+	.attr("x2", 35).attr("y2", 440);
+
+
+arrowSvg.append("text")
+    .attr("x", -200)             
+    .attr("y", 25)
+    .attr("transform", "rotate(270)")
+    .style("font-size", "14px") 
+    .style("fill", "#BCBBBB")
+    .text("Less gender equality"); 
+arrowSvg.append("text")
+    .attr("x", -440)             
+    .attr("y", 25)
+    .attr("transform", "rotate(270)")
+    .style("font-size", "14px") 
+    .style("fill", "#BCBBBB")
+    .text("More gender equality"); 
+
+
+var yearScale = d3.scaleLinear()
+	.domain([1995, 2015])
+	.range([30, 400]);
+
+var yearAxis = d3.axisBottom(yearScale)
+	.tickFormat(formatYear)
+	.tickSize(0);
+
+lineGraphSvg.append("g")
+	.attr("class", "xAxis")
+	.attr("transform", "translate(0, 470)")
+	.call(yearAxis);
+
+lineGraphSvg.selectAll(".xAxis text")
+	.attr("transform", "translate(0,5)");
+
+var indexScale = d3.scaleLinear()
+	.domain([0,0.85])
+	.range([470, 30]);
+
+var indexAxis = d3.axisLeft(indexScale)
+	.tickSize(370);
+
+lineGraphSvg.append("g")
+	.attr("class", "yAxis")
+	.attr("transform", "translate(400, 0)")
+	.call(indexAxis);
+
+lineGraphSvg.selectAll(".yAxis path")
+	.attr("opacity", 0);
+lineGraphSvg.selectAll("text")
+	.attr("fill", "#BCBBBB");
+
+var indexAxis = d3.axisLeft(indexScale)
+	.tickSize(370);
+lineGraphSvg.append("g")
+	.attr("class", "yAxis")
+	.attr("transform", "translate(400, 0)")
+	.call(indexAxis);
+lineGraphSvg.selectAll(".yAxis path")
+		.attr("opacity", 0);
+lineGraphSvg.selectAll("text")
+	.attr("fill", "#BCBBBB");
+lineGraphSvg.append("text")
+        .attr("x", 80)             
+        .attr("y", 250)
+        .style("font-size", "25px") 
+        .style("fill", "grey")
+        .style("opacity", 0.3)
+        .text("CLICK COUNTRIES ON MAP"); 
+lineGraphSvg.append("text")
+        .attr("x", 100)             
+        .attr("y", 300)
+        .style("font-size", "25px") 
+        .style("fill", "grey")
+        .style("opacity", 0.3)
+        .text("TO BEGIN GRAPHING"); 
+
+
+function updateLineGraph(){
+	//clear graph
+	lineGraphSvg.selectAll("*").remove();
+
+	initializeAxis();
+
+	if ( isEmpty(selectedCountries)){
+
+		lineGraphSvg.append("text")
+		        .attr("x", 80)             
+		        .attr("y", 250)
+		        .style("font-size", "25px") 
+		        .style("fill", "grey")
+		        .style("opacity", 0.3)
+		        .text("CLICK COUNTRIES ON MAP"); 
+		lineGraphSvg.append("text")
+		        .attr("x", 100)             
+		        .attr("y", 300)
+		        .style("font-size", "25px") 
+		        .style("fill", "grey")
+		        .style("opacity", 0.3)
+		        .text("TO BEGIN GRAPHING"); 
+	}
+
+	var yChange = 0;
+	var selectIndex = -1;
+
+	for (country in selectedCountries){
+		var countryNoSpaces = country.replace(/\s/g, '');
+
+		if (Object.keys(GIIData).includes("$"+countryNoSpaces)) {
+			var countryGII = GIIData.get(countryNoSpaces);
+
+			for (i = 0; i < indexYears.length; i++) {
+				if (indexYears[i] == 2015) {
+					if (countryGII[2015] != 0 || countryGII[2015] == 0){
+						appendYear(2015,2015,countryGII);
+					}
+				} else {
+					if (countryGII[indexYears[i]] != 0 && countryGII[indexYears[i+1]] != 0) {
+						appendYear(indexYears[i],indexYears[i+1],countryGII,true);
+					} else if (countryGII[indexYears[i]] != 0) {
+						for (j=i+2; j<indexYears.length; j++) {
+							if (countryGII[indexYears[j]] != 0) {
+								appendYear(indexYears[i],indexYears[j],countryGII,true);
+								break;
+							}
+						}
+						appendYear(indexYears[i],indexYears[i],countryGII,true);
+					}
+				}
+			}
+		}
+
+		lineGraphSvg.append("text")
+			.text("x")
+			.attr("id", "line-"+country)
+			.attr("class","deleteIcon")
+			.attr("x", 430-14)
+			.attr("y", yChange+100+10)
+			.style("font-size", "16px")
+			.style("fill","#b3b3b3")
+			.style("font-weight", "bold")
+			.on("mouseover", function(){
+				d3.select(this).style("fill","#333")
+			})
+			.on("mouseout", function(){
+				d3.select(this).style("fill","#b3b3b3")
+			})
+			.on("click", function(){
+				var thisCountry = this.id.slice(5);
+				updateSelected(officialNameMap.get(thisCountry.replace(/\s/g, '')).name,thisCountry);
+				updateLineGraph();
+				clearCircles();
+			});
+		lineGraphSvg.append("rect")
+			.attr("x", 430)
+			.attr("y", yChange + 100)
+			.attr("width", 10)
+			.attr("height", 10)
+			.style("fill", selectedCountries[country.replace(/\s/g, '')]);
+		lineGraphSvg.append("text")
+			.text(officialNameMap.get(country.replace(/\s/g, '')).name)
+			.attr("x", 430+14)
+			.attr("y", yChange+100+10)
+			.style("font-size", "12px")
+			.style("fill","grey");
+		yChange = yChange + 20;
+		selectIndex = selectIndex + 1;
+	} 
+}
+
+function appendYear(year1, year2,countryGII, displayLine){
+	lineGraphSvg.append("line")
+		.attr("x1", yearScale(year1))
+		.attr("y1", indexScale(countryGII[year1]))
+		.attr("x2", yearScale(year2))
+		.attr("y2", indexScale(countryGII[year2]))
+		.attr("class", "line-graph-line")
+		.attr("stroke", selectedCountries[country.replace(/\s/g, '')] )
+		.attr("stroke-width", 35).attr("id", country)
+		.attr("opacity", 0)
+		.attr("stroke-linecap", "round")
+
+		.on("mouseenter", function(){
+			graphMouseEnter(this.id,year1,year2,countryGII);
+		})
+		.on("mouseleave", function(){
+			setTimeout( function() {
+				graphMouseLeave(d3.select("#hoveringPoint"), d3.select("#textInfo"), d3.select("#hoverCircle")
+				);
+			}, 100);
+		})
+		.on("click", function(){
+			updateCircleGraph(countryGII["Country"], year1);
+		});
+
+	lineGraphSvg.append("line")
+		.attr("x1", yearScale(year1))
+		.attr("y1", indexScale(countryGII[year1]))
+		.attr("x2", yearScale(year2))
+		.attr("y2", indexScale(countryGII[year2]))
+		.attr("class", "line-graph-line")
+		.attr("stroke", selectedCountries[country.replace(/\s/g, '')] )
+		.attr("stroke-width", 3).attr("id", country)
+		.attr("stroke-linecap", "round");
+}
+
+function graphMouseEnter(id, year1, year2, countryGII) {
+	var canvas = document.getElementById('canvas');
+	var ctx = canvas.getContext('2d');
+	var text = ctx.measureText("year: " + year1 + ", GII: "+countryGII[year1]); 
+	
+	lineGraphSvg.append("circle")
+	.attr("id", "hoverCircle")
+	.attr("r", 5)
+	.attr("fill",selectedCountries[id.replace(/\s/g, '')])
+	.attr("cx", yearScale(year1))
+	.attr("cy", indexScale(countryGII[year1]))
+	.on("click", function(){
+		updateCircleGraph(countryGII["Country"], year1);
+	});
+
+	lineGraphSvg.append("rect")
+	.attr("id", "hoveringPoint")
+	.attr("width", text.width + 55)
+	.attr("height", 20)
+	.attr("stroke","#e8e8e8")
+	.attr("x", yearScale(year1))
+	.attr("y", -40+indexScale(countryGII[year1]))
+	.attr("fill", "white");
+	lineGraphSvg.append("text")
+	.attr("id", "textInfo")
+	.attr("stroke", "12px")
+	.attr("x", 5+yearScale(year1) + 3)
+	.attr("y", -40+14 + indexScale(countryGII[year1]))
+	.text("year: " + year1 + ", GII: "+countryGII[year1]);
+}
+
+function graphMouseLeave(hoveringPoint, textInfo, hoverCircle){
+	hoveringPoint.remove();
+	textInfo.remove();
+	hoverCircle.remove();
+}
+
+function arraySearch(arr,val) {
+    for (var i=0; i<arr.length; i++)
+        if (arr[i].Country === " " + val)                    
+            return i;
+    return false;
+}
+
+function initializeAxis(){
+	var yearScale = d3.scaleLinear()
+	.domain([1995, 2015])
+	.range([30, 400]);
+
+	var yearAxis = d3.axisBottom(yearScale)
+		.tickFormat(formatYear)
+		.tickSize(0);
+	lineGraphSvg.append("g")
+		.attr("class", "xAxis")
+		.attr("transform", "translate(0, 470)")
+		.call(yearAxis);
+	lineGraphSvg.selectAll(".xAxis text")
+			.attr("transform", "translate(0,5)");
+
+	var indexScale = d3.scaleLinear()
+		.domain([0,0.85])
+		.range([470, 30]);
+
+	var indexAxis = d3.axisLeft(indexScale)
+		.tickSize(370);
+	lineGraphSvg.append("g")
+		.attr("class", "yAxis")
+		.attr("transform", "translate(400, 0)")
+		.call(indexAxis);
+	lineGraphSvg.selectAll(".yAxis path")
+			.attr("opacity", 0);
+	lineGraphSvg.selectAll("text")
+		.attr("fill", "#BCBBBB");
+}
+
+
+var bubbleSvgMargin = 15; 
+var topMargin = 50;
+var bubbleMargin = 2;
+var middleMargin = 30;
+var radiusMax = (bubbleSvgWidth-(2*bubbleSvgMargin)-(6*bubbleMargin))/3/2;
+var radiusMin = 55;
+var variance = 15;
+var bottomYPos = bubbleSvgHeight - bubbleSvgMargin - radiusMax;
+var midYPos = bottomYPos-(2*bubbleMargin)-radiusMax-middleMargin;
+
+var positions = [
+	[bubbleSvgMargin+radiusMax, midYPos],
+	[bubbleSvgMargin+3*radiusMax+2*bubbleMargin, midYPos-variance],
+	[bubbleSvgMargin+5*radiusMax+4*bubbleMargin, midYPos-2.5*variance],
+	[bubbleSvgMargin+2*radiusMax+bubbleMargin, bottomYPos+2*variance],
+	[bubbleSvgMargin+4*radiusMax+3*bubbleMargin, bottomYPos],
+]
+
+// AdoleScale max: 230.6 , min: 0.5
+var AdoleScale = d3.scaleSqrt().domain([0.5,230.6]).range([radiusMin,radiusMax]);
+
+// LaborFemScale max: 90.8 , min: 9.2 ; LaborMaleScale max: 95.7 , min: 43.8
+var LaborScale = d3.scaleSqrt().domain([1,3]).range([radiusMin,radiusMax]);
+
+// MaternalScale max: 2900 , min: 3
+var MaternalScale = d3.scaleSqrt().domain([3,2900]).range([radiusMin,radiusMax]);
+
+// PopSecFemScale max: 100.6 , min: 0.4 ; PopSecMaleScale max: 100 , min: 2
+var PopSecScale = d3.scaleSqrt().domain([1,3]).range([radiusMin,radiusMax]);
+
+// SeatsScale max: 57.5 , min: 0.1
+var SeatScale = d3.scaleSqrt().domain([100-57.5, 100-0.1]).range([radiusMin,radiusMax]);
+
+var scales = [AdoleScale, LaborScale, MaternalScale, PopSecScale, SeatScale];
+var bubbleText = [
+	["Adolescent", "Birth Rate"],
+	["Labour Force", "Participation Ratio"],
+	["Maternal", "Mortality", "Ratio"],
+	["Ratio of Population", "with Some Secondary", "Education"],
+	["Percentage of", "Men in", "Parliament"]
+];
+
+function updateCircleGraph(country, year){
+	var countryNoSpaces = country.replace(/\s/g, '');
+
+	sevenData["AdoleValue"] = AdoleData.get(countryNoSpaces)[year] || 0;
+
+	if (LaborForceFemaleData.get(countryNoSpaces)[year] && LaborForceMaleData.get(countryNoSpaces)[year]){
+		var numb = LaborForceMaleData.get(countryNoSpaces)[year] / LaborForceFemaleData.get(countryNoSpaces)[year];
+		sevenData["LaborValue"] = Math.round(numb * 100) / 100;
+	} else { sevenData["LaborValue"] = 0; } 
+
+	sevenData["MaternalValue"] = MaternalMortalityRatioData.get(countryNoSpaces)[year] || 0;
+
+	if (PopSecEduFemaleData.get(countryNoSpaces)[year] && PopSecEduMaleData.get(countryNoSpaces)[year]){
+		var numb = PopSecEduMaleData.get(countryNoSpaces)[year] / PopSecEduFemaleData.get(countryNoSpaces)[year];
+		sevenData["PopSecValue"] = Math.round(numb * 100) / 100; 
+	} else { sevenData["PopSecValue"] = 0; } 
+
+	sevenData["SeatsValue"] = 100-SeatsParliamentData.get(countryNoSpaces)[year] || 0;
+
+	// reset the bubbles
+	bubbleMap.selectAll(".bubble").remove();
+	bubbleMap.selectAll(".bubbleTitle").remove();
+	bubbleMap.selectAll(".filler-text").remove();
+	bubbleMap.selectAll(".bubble-text").remove();
+
+	bubbleMap.append("text")
+	.attr("class","bubbleTitle")
+	.attr("x",bubbleSvgWidth/2)
+	.attr("y",topMargin)
+	.attr("text-anchor","middle")
+	.style("font-weight",600)
+	.style("font-size","25px")
+	.style("max-width", bubbleSvgWidth-2*bubbleSvgMargin)
+	.text("GII Factors");
+	bubbleMap.append("text")
+	.attr("class","bubbleTitle")
+	.attr("x",bubbleSvgWidth/2)
+	.attr("y",topMargin+30)
+	.attr("text-anchor","middle")
+	.style("font-weight",500)
+	.style("font-size","21px")
+	.style("max-width", bubbleSvgWidth-2*bubbleSvgMargin)
+	.text(officialNameMap.get(country).name+" in "+year+", GII="+GIIData.get(country)[year]);
+
+	var i = 0;
+	for (factor in sevenData) {
+		for (x = 0; x < bubbleText[i].length; x++){
+			bubbleMap.append("text")
+			.attr("class","bubble-text")
+			.attr("x",positions[i][0])
+			.attr("y",function(){
+				if (bubbleText[i].length == 1) {
+					return positions[i][1]
+				} else if (bubbleText[i].length == 2) {
+					if (x == 0) { return positions[i][1] - (15/2)}
+					if (x == 1) { return positions[i][1] + (15/2)}
+				} else if (x == 0) {
+					return positions[i][1] - 15;
+				} else if (x == 2) {
+					return positions[i][1] + 15;
+				} else { return positions[i][1]; }
+			})
+			.attr("text-anchor","middle")
+			.attr("alignment-baseline","middle")
+			.style("font-size","13px")
+			.text(bubbleText[i][x]);
+		}
+
+		var timeoutId; 
+		var num = sevenData[factor];
+
+		var bubbleContainer = bubbleMap.append("g")
+		.attr("id", factor)
+		.attr("class","bubble-container");
+
+		bubbleContainer.append("circle")
+		.attr("class","bubble")
+		.attr("cx",positions[i][0])
+		.attr("cy",positions[i][1])
+		.style("opacity", 0.4)
+		.attr("r", function() {
+			if (num != 0) {
+				return scales[i](num);
+			} else {
+				return 40;
+			}
+		})
+		.style("fill", function(){
+			if (num != 0){
+				return selectedCountries[country.replace(/\s/g, '')];
+			} else {
+				return "#ccc";
+			}
+		});
+
+		bubbleContainer.on("mouseenter", function(){
+			var mainTextAdd = "";
+			if (this.id == "AdoleValue") {
+				var smallText = ["births per 1000 women","ages 15-19"];
+			} else if (this.id == "LaborValue") { 
+				var smallText = ["Men to every 1 woman","(ages 15 or older)"];
+			 } else if (this.id == "MaternalValue") { 
+			 	var smallText = ["deaths per 100,000","live births"];
+			 } else if (this.id == "PopSecValue") { 
+			 	var smallText = ["Men to every 1 woman","(ages 25 or older)"];
+			 } else if (this.id == "SeatsValue") { 
+			 	var mainTextAdd = "%";
+			 	var smallText = ["seats held by men",""];
+			 }
+			var positionX = d3.select(this).select("circle").attr("cx");
+			var positionY = d3.select(this).select(".bubble").attr("cy");
+
+			d3.select(this).select(".bubble").style("opacity",1.0);
+
+			d3.select(this).append("text")
+			.attr("class","bubble-info")
+			.attr("font-size","25px")
+			.style("font-weight",500)
+			.attr("x",positionX)
+			.attr("y",parseInt(positionY)-10)
+			.attr("text-anchor","middle")
+			.attr("alignment-baseline","middle")
+			.text(sevenData[this.id]+mainTextAdd);
+
+			d3.select(this).append("text")
+			.attr("class","bubble-info")
+			.attr("font-size","13px")
+			.style("font-weight",500)
+			.attr("x",positionX)
+			.attr("y",parseInt(positionY)+10)
+			.attr("text-anchor","middle")
+			.attr("alignment-baseline","middle")
+			.text(smallText[0]);
+
+			d3.select(this).append("text")
+			.attr("class","bubble-info")
+			.attr("font-size","13px")
+			.style("font-weight",500)
+			.attr("x",positionX)
+			.attr("y",parseInt(positionY)+25)
+			.attr("text-anchor","middle")
+			.attr("alignment-baseline","middle")
+			.text(smallText[1]);
+		})
+		.on("mouseleave", function(){
+			d3.select(this).select(".bubble-text").style("opacity",1);
+			d3.select(this).select(".bubble").style("opacity",0.4);
+			bubbleMap.selectAll(".bubble-info").remove();
+		});
+
+		i++;
+	}
+}
+
+function clearCircles(){
+	bubbleMap.selectAll(".bubble").remove();
+	bubbleMap.selectAll(".bubbleTitle").remove();
+	bubbleMap.selectAll(".filler-text").remove();
+	bubbleMap.selectAll(".bubble-text").remove();
+
+	bubbleMap.append("text")
+	        .attr("x", bubbleSvgWidth/2)             
+	        .attr("y", bubbleSvgHeight/3+50)
+	        .attr("text-anchor","middle")
+	        .attr("class","filler-text")
+	        .style("font-size", "25px") 
+	        .style("fill", "grey")
+	        .style("opacity", 0.3)
+	        .text("CLICK A POINT ON THE GRAPH"); 
+	bubbleMap.append("text")
+	        .attr("x", bubbleSvgWidth/2)             
+	        .attr("y", 2*bubbleSvgHeight/3-50)
+	        .attr("text-anchor","middle")
+	        .attr("class","filler-text")
+	        .style("font-size", "25px") 
+	        .style("fill", "grey")
+	        .style("opacity", 0.3)
+	        .text("TO SHOW COUNTRY GII DETAILS"); 
+}
+
+</script>
+
+</html>
