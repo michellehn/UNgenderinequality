@@ -9,7 +9,7 @@
 <h2>By Michelle Nelson, Harley Mueller, and Philip Tao</h2>
 <p id="title-description">The United Nations evaluates gender inequality with their <a href="http://hdr.undp.org/en/content/gender-inequality-index-gii" target="_blank">Gender Inequality Index (GII)</a>, calculated by measuring seven aspects of human development: 1) adolescent birth rate, 2) male labor force participation, 3) female labor force participation, 4) maternal mortality ratio, 5) male participation in secondary education, 6) female participation in secondary education, and 6) representation of women in parliament. These variables are calculated together to create the index value, where a lower value indicates more gender equality.<br><br>Select a country below to view its GII index over time and the factors that are calculated into its GII index. </p>
 
-<svg id="world-map"></svg>
+<svg id="world-map" width="1050" height="520"></svg>
 <svg id="arrow-svg" width="50" height="500">
 	<defs>
 	<!-- Inspired by http://bl.ocks.org/tomgp/d59de83f771ca2b6f1d4 and in class example from April 10-->
@@ -19,8 +19,8 @@
 	</marker>
 	</defs>
 </svg>
-<svg id="gii-line-graph"></svg>
-<svg id="bubble-graph"></svg>
+<svg id="gii-line-graph" width="550" height="500"></svg>
+<svg id="bubble-graph" width="700" height="450"></svg>
 <canvas id = "canvas"> </canvas>
 
 
@@ -30,39 +30,6 @@
 // world map data modified from class notes, 2/15/17
 // country codes data from http://data.okfn.org/data/core/country-codes#data
 // data on the Gender Inequality Index and its associated factors obtained from the United Nations Development Programme, Human Development Reports: http://hdr.undp.org/en/data
-
-// set svg widths, dynamically
-if (window.innerWidth > 1340){
-	d3.select("#world-map")
-		.attr("width",1050)
-		.attr("height",520);
-	d3.select("#gii-line-graph")
-		.attr("width",550)
-		.attr("height",500);
-	d3.select("#bubble-graph")
-		.attr("width",700)
-		.attr("height",450);
-} else if (window.innerWidth > 1140) {
-	d3.select("#world-map")
-		.attr("width",1050)
-		.attr("height",520);
-	d3.select("#gii-line-graph")
-		.attr("width",550)
-		.attr("height",500);
-	d3.select("#bubble-graph")
-		.attr("width",500)
-		.attr("height",450);
-} else if (window.innerWidth < 1140) {
-	d3.select("#world-map")
-		.attr("width",850)
-		.attr("height",420);
-	d3.select("#gii-line-graph")
-		.attr("width",550)
-		.attr("height",500);
-	d3.select("#bubble-graph")
-		.attr("width",700)
-		.attr("height",450);
-}
 
 // VARIABLE DECLARATIONS
 
@@ -286,6 +253,14 @@ arrowSvg.append("text")
     .text("More gender equality"); 
 
 
+lineGraphSvg.append("text")
+	.attr("class","graph-label")
+	.attr("x",220) .attr("y",40)
+	.attr("text-anchor","middle")
+	.style("font-size","15px")
+	.style("fill","#595959")
+	.text("Gender Inequality Index (GII) over Time");
+
 var yearScale = d3.scaleLinear()
 	.domain([1995, 2015])
 	.range([30, 400]);
@@ -352,7 +327,6 @@ function updateLineGraph(){
 	initializeAxis();
 
 	if ( isEmpty(selectedCountries)){
-
 		lineGraphSvg.append("text")
 		        .attr("x", 80)             
 		        .attr("y", 250)
@@ -371,6 +345,15 @@ function updateLineGraph(){
 
 	var yChange = 0;
 	var selectIndex = -1;
+
+	lineGraphSvg.append("text")
+			.attr("class","graph-label")
+			.attr("x",220) .attr("y",40)
+			.attr("text-anchor","middle")
+			.style("font-size","15px")
+			.style("fill","#595959")
+			.text("Gender Inequality Index (GII) over Time");
+
 
 	for (country in selectedCountries){
 		var countryNoSpaces = country.replace(/\s/g, '');

@@ -72,7 +72,7 @@ line#v1, line#v2 {
 	cursor:default;
 }
 
-@media (min-width: 1140px) {
+@media (min-width: 1340px) {
 	#gii-line-graph, #world-map, #arrow-svg, {
 		display: inline-block;
 	}
@@ -82,7 +82,7 @@ line#v1, line#v2 {
 		margin: 0 auto;
 	}
 }
-@media (max-width: 1139px) {
+@media (max-width: 1339px) {
 	#gii-line-graph, #world-map, #arrow-svg, {
 		display: inline-block;
 	}
